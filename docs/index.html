@@ -1,0 +1,48 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>E-Commerce Sales & Logistics Dashboard</title>
+<style>
+:root{--bg:#101211;--panel:#171b19;--ink:#f1f2ec;--muted:#a0aaa1;--lime:#c5f36a;--line:#303833;--red:#ff7a6b}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.5 Inter,system-ui,sans-serif}
+.wrap{max-width:1150px;margin:0 auto;padding:0 24px}header{padding:44px 0 12px}h1{font-size:36px;margin:6px 0;letter-spacing:-.03em}
+.tag{font:11px ui-monospace,Consolas,monospace;color:var(--lime);text-transform:uppercase;letter-spacing:.08em}
+.sub{color:var(--muted);max-width:760px}a{color:var(--lime)}
+.kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin:22px 0}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:18px}
+.kpi b{display:block;font-size:26px}.kpi span{color:var(--muted);font:11px ui-monospace,Consolas,monospace;text-transform:uppercase}
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px}.full{grid-column:1/-1}
+h2{font-size:14px;margin:0 0 4px;color:var(--ink);font-weight:600}p.n{color:var(--muted);font-size:13px;margin:0 0 12px}
+table{width:100%;border-collapse:collapse;font-size:13px}td,th{padding:6px 8px;border-bottom:1px solid var(--line);text-align:left}
+th{color:var(--muted);font-weight:500}td.r,th.r{text-align:right;font-variant-numeric:tabular-nums}.bad{color:var(--red)}
+footer{color:var(--muted);padding:24px 0 56px;font-size:13px}
+@media(max-width:800px){.kpis{grid-template-columns:1fr 1fr}.grid{grid-template-columns:1fr}}
+</style></head><body><div class="wrap">
+<header><div class="tag">PostgreSQL · SQL analysis</div><h1>E-Commerce Sales & Logistics</h1>
+<p class="sub">Olist marketplace, 2016-2018: 99,441 orders and 112,650 order items across 8 tables. Every number below comes from a PostgreSQL view in <a href="https://github.com/VasilenData/ecommerce-logistics-dashboard/blob/main/sql/views.sql">sql/views.sql</a>.</p></header>
+<div class="kpis" id="kpis"></div>
+<div class="grid">
+<div class="card"><h2>Late deliveries hit reviews hard</h2><p class="n">Average review score by delivery vs. estimated date</p><canvas id="c1"></canvas></div>
+<div class="card"><h2>Monthly revenue (delivered orders)</h2><p class="n">With 3-month moving average</p><canvas id="c2"></canvas></div>
+<div class="card full"><h2>Where logistics lag: revenue vs. delivery time by state</h2><p class="n">Bubble = orders. Top right means big revenue AND slow delivery. Hover for details.</p><canvas id="c3" height="110"></canvas></div>
+<div class="card full"><h2>States ranked by revenue</h2><p class="n">Late % = delivered after the estimated date</p><table id="t"><thead><tr><th>State</th><th class="r">Revenue (BRL)</th><th class="r">Share</th><th class="r">Avg days</th><th class="r">P90 days</th><th class="r">Late %</th><th class="r">Freight % of rev.</th></tr></thead><tbody></tbody></table></div>
+<div class="card"><h2>Top categories by revenue</h2><p class="n">Cumulative share of total revenue</p><canvas id="c4"></canvas></div>
+<div class="card"><h2>Sellers shipping late to the carrier</h2><p class="n">Sellers with 100+ orders</p><table id="t2"><thead><tr><th>Seller</th><th>State</th><th class="r">Orders</th><th class="r">Late %</th></tr></thead><tbody></tbody></table></div>
+</div>
+<footer>Data: <a href="https://github.com/olist/work-at-olist-data">Olist Brazilian E-Commerce Public Dataset</a> (CC BY-NC-SA 4.0). Pipeline: Python + PostgreSQL. <a href="https://github.com/VasilenData/ecommerce-logistics-dashboard">Source</a></footer></div>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4"></script>
+<script>
+fetch('data.json').then(r=>r.json()).then(d=>{
+ const fmt=n=>n.toLocaleString('en-US'),S=d.v_state_performance,tot=S.reduce((a,x)=>a+x.revenue,0);
+ const w=S.reduce((a,x)=>a+x.avg_delivery_days*x.orders,0)/S.reduce((a,x)=>a+x.orders,0);
+ const late=S.reduce((a,x)=>a+x.late_pct*x.orders,0)/S.reduce((a,x)=>a+x.orders,0);
+ [[fmt(d.totals.orders),'orders'],[fmt(d.totals.order_items),'order items'],[w.toFixed(1)+' days','avg delivery time'],[late.toFixed(1)+'%','delivered late']]
+  .forEach(([v,l])=>kpis.insertAdjacentHTML('beforeend',`<div class="card kpi"><b>${v}</b><span>${l}</span></div>`));
+ const ax={ticks:{color:'#a0aaa1'},grid:{color:'#303833'}},opt={plugins:{legend:{display:false}},scales:{x:ax,y:ax}};
+ new Chart(c1,{type:'bar',data:{labels:d.v_review_vs_delay.map(x=>x.delivery_bucket.slice(3)),datasets:[{data:d.v_review_vs_delay.map(x=>x.avg_review_score),backgroundColor:['#c5f36a','#c5f36a','#ffb36b','#ff7a6b']}]},options:{...opt,scales:{x:ax,y:{...ax,min:0,max:5}}}});
+ new Chart(c2,{type:'line',data:{labels:d.v_monthly_revenue.map(x=>x.month.slice(0,7)),datasets:[{label:'Revenue',data:d.v_monthly_revenue.map(x=>x.revenue),borderColor:'#c5f36a',tension:.3},{label:'3m avg',data:d.v_monthly_revenue.map(x=>x.revenue_3m_avg),borderColor:'#a0aaa1',borderDash:[5,4],pointRadius:0,tension:.3}]},options:{...opt,plugins:{legend:{display:true,labels:{color:'#a0aaa1'}}}}});
+ new Chart(c3,{type:'bubble',data:{datasets:[{data:S.map(x=>({x:x.avg_delivery_days,y:x.revenue/1000,r:Math.max(4,Math.sqrt(x.orders)/6),s:x})),backgroundColor:S.map(x=>x.late_pct>10?'rgba(255,122,107,.65)':'rgba(197,243,106,.55)')}]},options:{plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>{const s=c.raw.s;return `${s.state}: ${s.avg_delivery_days}d avg, ${s.late_pct}% late, BRL ${fmt(s.revenue)} revenue`}}}},scales:{x:{...ax,title:{display:true,text:'Avg delivery days',color:'#a0aaa1'}},y:{...ax,title:{display:true,text:'Revenue (BRL thousands)',color:'#a0aaa1'}}}}});
+ new Chart(c4,{type:'bar',data:{labels:d.v_category_pareto.map(x=>x.category),datasets:[{data:d.v_category_pareto.map(x=>x.revenue/1000),backgroundColor:'#c5f36a'}]},options:{...opt,indexAxis:'y'}});
+ document.querySelector('#t tbody').innerHTML=[...S].sort((a,b)=>b.revenue-a.revenue).slice(0,15).map(x=>`<tr><td>${x.state}</td><td class="r">${fmt(x.revenue)}</td><td class="r">${x.revenue_share_pct}%</td><td class="r">${x.avg_delivery_days}</td><td class="r">${x.p90_delivery_days}</td><td class="r ${x.late_pct>10?'bad':''}">${x.late_pct}%</td><td class="r">${x.freight_pct_of_revenue}%</td></tr>`).join('');
+ document.querySelector('#t2 tbody').innerHTML=d.v_seller_lateness.map(x=>`<tr><td>${x.seller_id.slice(0,8)}…</td><td>${x.state}</td><td class="r">${x.orders}</td><td class="r bad">${x.late_to_carrier_pct}%</td></tr>`).join('');
+});
+</script></body></html>
