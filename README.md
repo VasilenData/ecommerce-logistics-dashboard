@@ -39,4 +39,4 @@ Then open the Tableau workbook and point it at the `ecommerce` database.
 SQL and workbook are being added to this repository.
 
 ---
-Built by [Vasilen Kanchev](https://vasilendata.github.io) · [LinkedIn](https://www.linkedin.com/in/vasilen-kanchev-030878290/)
+Built by [Vasilen Kanchev](https://vasilendata.github.io) · [LinkedIn](https://www.linkedin.com/in/vasilenkanchev/)
