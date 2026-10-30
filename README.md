@@ -1,5 +1,7 @@
 # E-Commerce Sales & Logistics Dashboard
 
+[![ci](https://github.com/VasilenData/ecommerce-logistics-dashboard/actions/workflows/ci.yml/badge.svg)](https://github.com/VasilenData/ecommerce-logistics-dashboard/actions/workflows/ci.yml) [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE) ![Python 3.11](https://img.shields.io/badge/python-3.11-3670A0.svg)
+
 SQL analysis of 99,441 orders and 112,650 order items from the public Olist marketplace dataset, loaded into **PostgreSQL**, modelled with analytical views (CTEs, joins, window functions) and published as an interactive dashboard.
 
 **Live dashboard: https://vasilendata.github.io/ecommerce-logistics-dashboard/**
@@ -29,6 +31,9 @@ flowchart LR
 
 ## SQL techniques used
 `WITH` CTEs · multi-table joins (up to 5 tables) · `LAG`, `RANK`, running `SUM() OVER`, moving average frames · `PERCENTILE_CONT` · `DATE_TRUNC` · conditional bucketing · foreign keys and indexes in the schema
+
+## Tests
+`pytest -q` loads a tiny hand-made dataset (four delivered orders, one canceled, two states) into an embedded PostgreSQL and checks the views against values worked out by hand: cancelled orders are excluded, each delivery bucket gets the right review score, state late rate, revenue share and average days match, monthly growth is empty for the first month, and category names come from the English translation. CI runs the same tests and a lint check on every push.
 
 ## Run it
 ```bash
