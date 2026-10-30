@@ -4,7 +4,11 @@ Usage:
   python scripts/pipeline.py --data-dir data                      # embedded local Postgres (pgserver), no setup
   python scripts/pipeline.py --data-dir data --dsn postgresql://user:pw@localhost/ecommerce
 """
-import argparse, io, json, os, tempfile
+import argparse
+import io
+import json
+import os
+import tempfile
 from datetime import date, datetime
 from decimal import Decimal
 
@@ -25,7 +29,7 @@ def copy_table(cur, table, path):
     df = pd.read_csv(path)
     if table == "order_reviews":  # review_id is not unique in the source
         df = df.drop_duplicates()
-    cur.execute(f"select column_name from information_schema.columns where table_name=%s order by ordinal_position", (table,))
+    cur.execute("select column_name from information_schema.columns where table_name=%s order by ordinal_position", (table,))
     cols = [r[0] for r in cur.fetchall()]
     df = df[cols]
     if table == 'products':  # pandas reads nullable ints as floats
