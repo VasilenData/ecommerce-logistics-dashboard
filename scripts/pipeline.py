@@ -29,7 +29,8 @@ def copy_table(cur, table, path):
     df = pd.read_csv(path)
     if table == "order_reviews":  # review_id is not unique in the source
         df = df.drop_duplicates()
-    cur.execute("select column_name from information_schema.columns where table_name=%s order by ordinal_position", (table,))
+    cur.execute("select column_name from information_schema.columns where table_schema=current_schema() "
+                "and table_name=%s order by ordinal_position", (table,))
     cols = [r[0] for r in cur.fetchall()]
     df = df[cols]
     if table == 'products':  # pandas reads nullable ints as floats
@@ -45,22 +46,47 @@ def jsonable(v):
     return v
 
 
-def run(data_dir, dsn):
-    conn = psycopg2.connect(dsn); conn.autocommit = True; cur = conn.cursor()
-    cur.execute(open(os.path.join(ROOT, "sql", "schema.sql")).read())
-    counts = {t: copy_table(cur, t, os.path.join(data_dir, f)) for t, f in TABLES.items()}
-    print("loaded", counts)
-    cur.execute(open(os.path.join(ROOT, "sql", "views.sql")).read())
-    out = {"row_counts": counts}
-    cur.execute("select count(*), sum(price) from order_items"); n, rev = cur.fetchone()
-    out["totals"] = {"order_items": n, "gross_item_revenue": float(rev)}
-    cur.execute("select count(*) from orders"); out["totals"]["orders"] = cur.fetchone()[0]
-    for v in VIEWS:
-        cur.execute(f"select * from {v}"); cols = [c[0] for c in cur.description]
-        out[v] = [{c: jsonable(x) for c, x in zip(cols, row)} for row in cur.fetchall()]
-        print(v, len(out[v]), "rows")
-    os.makedirs(os.path.join(ROOT, "docs"), exist_ok=True)
-    json.dump(out, open(os.path.join(ROOT, "docs", "data.json"), "w"), indent=1)
+def write_export(payload, path):
+    directory = os.path.dirname(path) or "."
+    os.makedirs(directory, exist_ok=True)
+    temporary = None
+    try:
+        with tempfile.NamedTemporaryFile(mode="w", encoding="utf-8", dir=directory, delete=False) as stream:
+            temporary = stream.name
+            stream.write(payload)
+            stream.flush()
+            os.fsync(stream.fileno())
+        os.replace(temporary, path)
+    finally:
+        if temporary is not None and os.path.exists(temporary):
+            os.unlink(temporary)
+
+
+def run(data_dir, dsn, out_path=None):
+    conn = psycopg2.connect(dsn)
+    try:
+        # DDL, loads and views share one transaction. A bad CSV must not leave
+        # yesterday's tables dropped or partially replaced.
+        with conn:
+            with conn.cursor() as cur:
+                with open(os.path.join(ROOT, "sql", "schema.sql"), encoding="utf-8") as source:
+                    cur.execute(source.read())
+                counts = {t: copy_table(cur, t, os.path.join(data_dir, f)) for t, f in TABLES.items()}
+                print("loaded", counts)
+                with open(os.path.join(ROOT, "sql", "views.sql"), encoding="utf-8") as source:
+                    cur.execute(source.read())
+                out = {"row_counts": counts}
+                cur.execute("select count(*), coalesce(sum(price), 0) from order_items"); n, rev = cur.fetchone()
+                out["totals"] = {"order_items": n, "gross_item_revenue": float(rev)}
+                cur.execute("select count(*) from orders"); out["totals"]["orders"] = cur.fetchone()[0]
+                for v in VIEWS:
+                    cur.execute(f"select * from {v}"); cols = [c[0] for c in cur.description]
+                    out[v] = [{c: jsonable(x) for c, x in zip(cols, row)} for row in cur.fetchall()]
+                    print(v, len(out[v]), "rows")
+                payload = json.dumps(out, indent=1, allow_nan=False)
+    finally:
+        conn.close()
+    write_export(payload, out_path or os.path.join(ROOT, "docs", "data.json"))
     return out
 
 
