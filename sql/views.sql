@@ -45,7 +45,9 @@ FROM m WHERE month BETWEEN '2017-01-01' AND '2018-08-01' ORDER BY month;
 CREATE OR REPLACE VIEW v_review_vs_delay AS
 WITH r AS (
     SELECT d.order_id, d.is_late, d.days_vs_estimate, AVG(rv.review_score) AS score
-    FROM v_delivered_orders d JOIN order_reviews rv USING (order_id) GROUP BY d.order_id, d.is_late, d.days_vs_estimate
+    FROM v_delivered_orders d JOIN order_reviews rv USING (order_id)
+    WHERE d.days_vs_estimate IS NOT NULL
+    GROUP BY d.order_id, d.is_late, d.days_vs_estimate
 )
 SELECT CASE WHEN days_vs_estimate <= -7 THEN '1. at least 7 days early' WHEN days_vs_estimate <= 0 THEN '2. on time or less than 7 days early'
             WHEN days_vs_estimate <= 7 THEN '3. up to 7 days late' ELSE '4. more than 7 days late' END AS delivery_bucket,
