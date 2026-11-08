@@ -457,22 +457,22 @@
  ],
  "v_review_vs_delay": [
   {
-   "delivery_bucket": "1. 7+ days early",
+   "delivery_bucket": "1. at least 7 days early",
    "orders": 70929,
    "avg_review_score": 4.32
   },
   {
-   "delivery_bucket": "2. on time (0-7 days early)",
+   "delivery_bucket": "2. on time or less than 7 days early",
    "orders": 17234,
    "avg_review_score": 4.2
   },
   {
-   "delivery_bucket": "3. 1-7 days late",
+   "delivery_bucket": "3. up to 7 days late",
    "orders": 4409,
    "avg_review_score": 3.18
   },
   {
-   "delivery_bucket": "4. 7+ days late",
+   "delivery_bucket": "4. more than 7 days late",
    "orders": 3252,
    "avg_review_score": 1.73
   }
