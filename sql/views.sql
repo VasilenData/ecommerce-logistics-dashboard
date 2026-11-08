@@ -41,14 +41,14 @@ SELECT month, orders, ROUND(revenue, 0) AS revenue,
        ROUND(AVG(revenue) OVER (ORDER BY month ROWS BETWEEN 2 PRECEDING AND CURRENT ROW), 0) AS revenue_3m_avg
 FROM m WHERE month BETWEEN '2017-01-01' AND '2018-08-01' ORDER BY month;
 
--- Q3. Does lateness hurt reviews?
+-- Q3. How do review scores vary by delivery timing?
 CREATE OR REPLACE VIEW v_review_vs_delay AS
 WITH r AS (
     SELECT d.order_id, d.is_late, d.days_vs_estimate, AVG(rv.review_score) AS score
     FROM v_delivered_orders d JOIN order_reviews rv USING (order_id) GROUP BY d.order_id, d.is_late, d.days_vs_estimate
 )
-SELECT CASE WHEN days_vs_estimate <= -7 THEN '1. 7+ days early' WHEN days_vs_estimate <= 0 THEN '2. on time (0-7 days early)'
-            WHEN days_vs_estimate <= 7 THEN '3. 1-7 days late' ELSE '4. 7+ days late' END AS delivery_bucket,
+SELECT CASE WHEN days_vs_estimate <= -7 THEN '1. at least 7 days early' WHEN days_vs_estimate <= 0 THEN '2. on time or less than 7 days early'
+            WHEN days_vs_estimate <= 7 THEN '3. up to 7 days late' ELSE '4. more than 7 days late' END AS delivery_bucket,
        COUNT(*) AS orders, ROUND(AVG(score)::numeric, 2) AS avg_review_score
 FROM r GROUP BY 1 ORDER BY 1;
 
