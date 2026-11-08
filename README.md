@@ -23,7 +23,7 @@ flowchart LR
 ```
 
 ## What the data says (real output from the views)
-- **Later deliveries are associated with lower review scores.** Orders delivered 7+ days late average a **1.73** review score, versus **4.32** for orders arriving 7+ days early. Orders 1-7 days late average 3.18. These observational groups do not establish that delivery timing caused the difference.
+- **Later deliveries are associated with lower review scores.** Orders delivered more than 7 days late average a **1.73** review score, versus **4.32** for orders arriving at least 7 days early. Orders delivered late by up to 7 days average 3.18. These observational groups do not establish that delivery timing caused the difference.
 - **São Paulo carries the business and delivers well:** 38.3% of revenue, 8.8 days average, 5.9% late.
 - **Rio de Janeiro combines high revenue with frequent delays:** 13.3% of revenue (second largest), 15.3 days average and **13.5% late**, more than double São Paulo. This makes it a candidate for further investigation; the analysis does not estimate the effect of an intervention.
 - **The slowest states are small:** Roraima (29.4 days), Amapá (27.2) and Amazonas (26.4) average the longest waits but are each 0.2% of revenue or less. Alagoas stands out at 23.9% late.
@@ -50,7 +50,7 @@ The views in `sql/views.sql` can also be connected directly to Tableau, Power BI
 
 ## Notes and limits
 - Data is from 2016-2018; delivery is measured against Olist's own estimated delivery date.
-- Revenue is item price in BRL for delivered orders (freight excluded unless stated).
+- Chart and state/category-table revenue is item price in BRL for delivered orders, excluding freight. The headline item-value total sums all order statuses; it is not the delivered-order revenue denominator. The headline order count likewise covers all 99,441 source orders.
 - Seller lateness counts each seller/order once, even when it contains multiple items. An order is late to the carrier if any item misses its shipping limit; missing limits are excluded from that metric.
 - A failed CSV load rolls back the complete table/view rebuild. Dashboard JSON is replaced atomically after a successful build.
 - Integration tests use an isolated schema when `TEST_DATABASE_URL` is set, or embedded PostgreSQL otherwise.
