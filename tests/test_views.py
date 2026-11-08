@@ -69,6 +69,18 @@ def test_review_score_by_delivery_bucket(cur):
     assert got == {"1": 5.0, "2": 4.0, "3": 3.0, "4": 1.0}
 
 
+def test_unknown_delivery_estimate_is_not_classified_as_late(cur):
+    cur.execute("BEGIN")
+    try:
+        cur.execute("INSERT INTO orders (order_id,customer_id,order_status,order_purchase_timestamp,"
+                    "order_delivered_customer_date) VALUES ('unknown-estimate','c1','delivered','2017-03-01','2017-03-20')")
+        cur.execute("INSERT INTO order_reviews (review_id,order_id,review_score) VALUES ('unknown','unknown-estimate',1)")
+        assert sum(row["orders"] for row in rows(cur, "select * from v_review_vs_delay")) == 4
+        assert rows(cur, "select count(*) n from v_delivered_orders")[0]["n"] == 5
+    finally:
+        cur.execute("ROLLBACK")
+
+
 def test_state_performance(cur):
     s = {r["state"]: r for r in rows(cur, "select * from v_state_performance")}
     assert float(s["SP"]["late_pct"]) == 0.0 and float(s["RJ"]["late_pct"]) == 100.0
