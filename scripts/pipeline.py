@@ -26,7 +26,9 @@ VIEWS = ["v_state_performance", "v_monthly_revenue", "v_review_vs_delay", "v_cat
 
 
 def copy_table(cur, table, path):
-    df = pd.read_csv(path)
+    # COPY knows the database types. Preserve textual identifiers/postal prefixes
+    # and literal strings such as "NA" instead of pandas' default NA/type inference.
+    df = pd.read_csv(path, dtype=str, keep_default_na=False)
     if table == "order_reviews":  # review_id is not unique in the source
         df = df.drop_duplicates()
     cur.execute("select column_name from information_schema.columns where table_schema=current_schema() "
@@ -34,7 +36,7 @@ def copy_table(cur, table, path):
     cols = [r[0] for r in cur.fetchall()]
     df = df[cols]
     if table == 'products':  # pandas reads nullable ints as floats
-        for c in cols[2:]: df[c] = df[c].astype('Int64')
+        for c in cols[2:]: df[c] = pd.to_numeric(df[c].replace('', pd.NA)).astype('Int64')
     buf = io.StringIO(); df.to_csv(buf, index=False, header=False); buf.seek(0)
     cur.copy_expert(f"COPY {table} ({','.join(cols)}) FROM STDIN WITH (FORMAT csv, NULL '')", buf)
     return len(df)

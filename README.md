@@ -50,9 +50,11 @@ The views in `sql/views.sql` can also be connected directly to Tableau, Power BI
 
 ## Notes and limits
 - Data is from 2016-2018; delivery is measured against Olist's own estimated delivery date.
+- Review-by-delay buckets require a known estimated delivery date. An unknown estimate is excluded from this comparison, not labelled late; known actual delivery durations still contribute to state delivery-time metrics.
 - Chart and state/category-table revenue is item price in BRL for delivered orders, excluding freight. The headline item-value total sums all order statuses; it is not the delivered-order revenue denominator. The headline order count likewise covers all 99,441 source orders.
 - Seller lateness counts each seller/order once, even when it contains multiple items. An order is late to the carrier if any item misses its shipping limit; missing limits are excluded from that metric.
 - A failed CSV load rolls back the complete table/view rebuild. Dashboard JSON is replaced atomically after a successful build.
+- CSV loading preserves textual IDs, postal prefixes and literal text such as `NA`; only the nullable product integer columns receive numeric conversion before PostgreSQL COPY.
 - Integration tests use an isolated schema when `TEST_DATABASE_URL` is set, or embedded PostgreSQL otherwise.
 - Dataset license: CC BY-NC-SA 4.0 (Olist).
 
