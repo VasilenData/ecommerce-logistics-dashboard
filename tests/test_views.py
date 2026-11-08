@@ -30,12 +30,17 @@ INSERT INTO category_translation VALUES ('beleza','beauty');
 
 
 @pytest.fixture(scope="module")
-def cur():
+def database_dsn():
     dsn = os.environ.get("TEST_DATABASE_URL")
     if not dsn:
         pgserver = pytest.importorskip("pgserver")
         dsn = pgserver.get_server(tempfile.mkdtemp()).get_uri()
-    conn = psycopg2.connect(dsn)
+    return dsn
+
+
+@pytest.fixture(scope="module")
+def cur(database_dsn):
+    conn = psycopg2.connect(database_dsn)
     conn.autocommit = True
     c = conn.cursor()
     schema = "logistics_test_" + uuid.uuid4().hex
@@ -104,12 +109,13 @@ def test_seller_late_rate_counts_orders_once_even_with_multiple_items(cur):
         cur.execute("ROLLBACK")
 
 
-def test_failed_csv_rebuild_preserves_previous_database_and_export(cur, tmp_path):
+def test_failed_csv_rebuild_preserves_previous_database_and_export(cur, database_dsn, tmp_path):
     from scripts.pipeline import run
 
     cur.execute("select current_schema()")
     schema = cur.fetchone()[0]
-    dsn = psycopg2.extensions.make_dsn(cur.connection.dsn, options=f"-c search_path={schema}")
+    # connection.dsn masks its password; reconnect using the original fixture DSN.
+    dsn = psycopg2.extensions.make_dsn(database_dsn, options=f"-c search_path={schema}")
     output = tmp_path / "data.json"
     output.write_text('{"previous":"complete"}', encoding="utf-8")
     with pytest.raises(FileNotFoundError):
