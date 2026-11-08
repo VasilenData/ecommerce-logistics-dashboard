@@ -19,7 +19,7 @@ test('a blocked chart CDN leaves summary and tables readable', async () => {
   });
   vm.runInContext(script, context);
   await new Promise(resolve => setImmediate(resolve));
-  assert.match(node('kpis').innerHTML, /Gross item revenue/);
+  assert.match(node('kpis').innerHTML, /Item value \(all statuses\)/);
   assert.match(node('#t tbody').innerHTML, /<tr>/);
   assert.match(node('#t2 tbody').innerHTML, /<tr>/);
   assert.match(node('main').innerHTML, /Charts could not be loaded/);
