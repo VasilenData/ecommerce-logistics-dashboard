@@ -5,11 +5,11 @@ below can be checked by hand.
 """
 import os
 import tempfile
+import uuid
 
-import psycopg2
 import pytest
 
-pgserver = pytest.importorskip("pgserver")
+psycopg2 = pytest.importorskip("psycopg2")
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
 FIXTURE = """
@@ -30,15 +30,27 @@ INSERT INTO category_translation VALUES ('beleza','beauty');
 
 
 @pytest.fixture(scope="module")
-def cur():
-    srv = pgserver.get_server(tempfile.mkdtemp())
-    conn = psycopg2.connect(srv.get_uri())
+def database_dsn():
+    dsn = os.environ.get("TEST_DATABASE_URL")
+    if not dsn:
+        pgserver = pytest.importorskip("pgserver")
+        dsn = pgserver.get_server(tempfile.mkdtemp()).get_uri()
+    return dsn
+
+
+@pytest.fixture(scope="module")
+def cur(database_dsn):
+    conn = psycopg2.connect(database_dsn)
     conn.autocommit = True
     c = conn.cursor()
+    schema = "logistics_test_" + uuid.uuid4().hex
+    c.execute(f'CREATE SCHEMA "{schema}"')
+    c.execute(f'SET search_path TO "{schema}"')
     c.execute(open(os.path.join(ROOT, "sql", "schema.sql")).read())
     c.execute(FIXTURE)
     c.execute(open(os.path.join(ROOT, "sql", "views.sql")).read())
     yield c
+    c.execute(f'DROP SCHEMA "{schema}" CASCADE')
     conn.close()
 
 
@@ -74,3 +86,40 @@ def test_monthly_revenue_and_growth(cur):
 def test_category_pareto_uses_english_names(cur):
     r = rows(cur, "select * from v_category_pareto")
     assert r[0]["category"] == "beauty" and float(r[0]["cumulative_share_pct"]) == 100.0
+
+
+def test_seller_late_rate_counts_orders_once_even_with_multiple_items(cur):
+    cur.execute("BEGIN")
+    try:
+        cur.execute("insert into sellers(seller_id, seller_state) values ('fixture-seller', 'SP')")
+        cur.execute("""insert into orders(order_id, customer_id, order_status, order_purchase_timestamp,
+                       order_delivered_carrier_date)
+                       select 'seller-test-' || n, 'c1', 'delivered', '2017-03-01'::timestamp, '2017-03-02'::timestamp
+                       from generate_series(1, 100) n""")
+        cur.execute("""insert into order_items(order_id, order_item_id, product_id, seller_id,
+                       shipping_limit_date, price, freight_value)
+                       select 'seller-test-' || n, item, 'p1', 'fixture-seller',
+                              case when n = 1 then '2017-03-01'::timestamp else '2017-03-03'::timestamp end, 10, 1
+                       from generate_series(1, 100) n,
+                            lateral generate_series(1, case when n = 1 then 10 else 1 end) item""")
+        result = rows(cur, "select orders, late_to_carrier_pct from v_seller_lateness where seller_id='fixture-seller'")[0]
+        assert result["orders"] == 100
+        assert float(result["late_to_carrier_pct"]) == 1.0
+    finally:
+        cur.execute("ROLLBACK")
+
+
+def test_failed_csv_rebuild_preserves_previous_database_and_export(cur, database_dsn, tmp_path):
+    from scripts.pipeline import run
+
+    cur.execute("select current_schema()")
+    schema = cur.fetchone()[0]
+    # connection.dsn masks its password; reconnect using the original fixture DSN.
+    dsn = psycopg2.extensions.make_dsn(database_dsn, options=f"-c search_path={schema}")
+    output = tmp_path / "data.json"
+    output.write_text('{"previous":"complete"}', encoding="utf-8")
+    with pytest.raises(FileNotFoundError):
+        run(str(tmp_path), dsn, str(output))
+    assert rows(cur, "select count(*) n from orders")[0]["n"] == 5
+    assert rows(cur, "select count(*) n from v_delivered_orders")[0]["n"] == 4
+    assert output.read_text(encoding="utf-8") == '{"previous":"complete"}'

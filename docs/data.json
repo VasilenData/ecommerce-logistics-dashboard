@@ -571,64 +571,64 @@
  ],
  "v_seller_lateness": [
   {
-   "seller_id": "88460e8ebdecbfecb5f9601833981930",
-   "state": "PR",
-   "orders": 246,
-   "late_to_carrier_pct": 50.3
-  },
-  {
    "seller_id": "1ca7077d890b907f89be8c954a02686a",
    "state": "SP",
    "orders": 108,
-   "late_to_carrier_pct": 49.6
+   "late_to_carrier_pct": 50.9
+  },
+  {
+   "seller_id": "88460e8ebdecbfecb5f9601833981930",
+   "state": "PR",
+   "orders": 246,
+   "late_to_carrier_pct": 47.6
   },
   {
    "seller_id": "f4aba7c0bca51484c30ab7bdc34bcdd1",
    "state": "SP",
    "orders": 108,
-   "late_to_carrier_pct": 45.2
+   "late_to_carrier_pct": 44.4
   },
   {
    "seller_id": "b1fc4f64df5a0e8b6913ab38803c57a9",
    "state": "RJ",
    "orders": 107,
-   "late_to_carrier_pct": 43.0
+   "late_to_carrier_pct": 38.3
   },
   {
    "seller_id": "8e6cc767478edae941d9bd9eb778d77a",
    "state": "MG",
    "orders": 100,
-   "late_to_carrier_pct": 38.0
-  },
-  {
-   "seller_id": "7aa4334be125fcdd2ba64b3180029f14",
-   "state": "SP",
-   "orders": 214,
-   "late_to_carrier_pct": 36.3
+   "late_to_carrier_pct": 37.0
   },
   {
    "seller_id": "dd7ddc04e1b6c2c614352b383efe2d36",
    "state": "SP",
    "orders": 121,
-   "late_to_carrier_pct": 35.9
+   "late_to_carrier_pct": 36.4
   },
   {
-   "seller_id": "213b25e6f54661939f11710a6fddb871",
+   "seller_id": "7aa4334be125fcdd2ba64b3180029f14",
    "state": "SP",
-   "orders": 152,
-   "late_to_carrier_pct": 35.8
+   "orders": 214,
+   "late_to_carrier_pct": 36.0
   },
   {
    "seller_id": "37515688008a7a40ac93e3b2e4ab203f",
    "state": "SP",
    "orders": 227,
-   "late_to_carrier_pct": 35.1
+   "late_to_carrier_pct": 35.2
   },
   {
-   "seller_id": "4c2b230173bb36f9b240f2b8ac11786e",
+   "seller_id": "213b25e6f54661939f11710a6fddb871",
    "state": "SP",
-   "orders": 258,
-   "late_to_carrier_pct": 34.4
+   "orders": 152,
+   "late_to_carrier_pct": 34.9
+  },
+  {
+   "seller_id": "2eb70248d66e0e3ef83659f71b244378",
+   "state": "SP",
+   "orders": 187,
+   "late_to_carrier_pct": 32.1
   }
  ]
 }

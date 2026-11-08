@@ -67,9 +67,15 @@ FROM cat ORDER BY revenue DESC LIMIT 15;
 
 -- Q5. Sellers with the most late shipments (min 100 orders).
 CREATE OR REPLACE VIEW v_seller_lateness AS
-SELECT oi.seller_id, s.seller_state AS state, COUNT(DISTINCT o.order_id) AS orders,
-       ROUND(AVG((o.order_delivered_carrier_date > oi.shipping_limit_date)::int) * 100, 1) AS late_to_carrier_pct
-FROM order_items oi JOIN orders o USING (order_id) JOIN sellers s USING (seller_id)
-WHERE o.order_status = 'delivered' AND o.order_delivered_carrier_date IS NOT NULL
-GROUP BY oi.seller_id, s.seller_state HAVING COUNT(DISTINCT o.order_id) >= 100
-ORDER BY late_to_carrier_pct DESC LIMIT 10;
+WITH seller_orders AS (
+    SELECT oi.seller_id, s.seller_state AS state, o.order_id,
+           BOOL_OR(o.order_delivered_carrier_date > oi.shipping_limit_date) AS is_late
+    FROM order_items oi JOIN orders o USING (order_id) JOIN sellers s USING (seller_id)
+    WHERE o.order_status = 'delivered' AND o.order_delivered_carrier_date IS NOT NULL
+      AND oi.shipping_limit_date IS NOT NULL
+    GROUP BY oi.seller_id, s.seller_state, o.order_id
+)
+SELECT seller_id, state, COUNT(*) AS orders,
+       ROUND(AVG(is_late::int) * 100, 1) AS late_to_carrier_pct
+FROM seller_orders GROUP BY seller_id, state HAVING COUNT(*) >= 100
+ORDER BY late_to_carrier_pct DESC, seller_id LIMIT 10;
