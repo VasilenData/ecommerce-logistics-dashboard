@@ -135,3 +135,33 @@ def test_failed_csv_rebuild_preserves_previous_database_and_export(cur, database
     assert rows(cur, "select count(*) n from orders")[0]["n"] == 5
     assert rows(cur, "select count(*) n from v_delivered_orders")[0]["n"] == 4
     assert output.read_text(encoding="utf-8") == '{"previous":"complete"}'
+
+
+
+def test_monthly_growth_and_average_include_zero_sale_calendar_month(cur):
+    cur.execute("BEGIN")
+    try:
+        cur.execute("INSERT INTO orders(order_id,customer_id,order_status,order_purchase_timestamp) "
+                    "VALUES ('may-order','c1','delivered','2017-05-01')")
+        cur.execute("INSERT INTO order_items(order_id,order_item_id,product_id,seller_id,price,freight_value) "
+                    "VALUES ('may-order',1,'p1','s1',200,0)")
+        result = rows(cur, "select * from v_monthly_revenue order by month")
+        assert [row["month"].month for row in result] == [3, 4, 5]
+        assert [float(row["revenue"]) for row in result] == [400, 0, 200]
+        assert [row["orders"] for row in result] == [4, 0, 1]
+        assert result[0]["mom_growth_pct"] is None
+        assert float(result[1]["mom_growth_pct"]) == -100
+        assert result[2]["mom_growth_pct"] is None  # zero denominator, not March's revenue
+        assert float(result[2]["revenue_3m_avg"]) == 200  # (400 + 0 + 200) / 3
+        assert sum(float(row["revenue"]) for row in result) == 600
+    finally:
+        cur.execute("ROLLBACK")
+
+
+def test_monthly_revenue_empty_input_remains_empty(cur):
+    cur.execute("BEGIN")
+    try:
+        cur.execute("UPDATE orders SET order_status='canceled'")
+        assert rows(cur, "select * from v_monthly_revenue") == []
+    finally:
+        cur.execute("ROLLBACK")
