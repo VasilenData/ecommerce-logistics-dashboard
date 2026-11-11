@@ -143,8 +143,8 @@ def test_monthly_growth_and_average_include_zero_sale_calendar_month(cur):
     try:
         cur.execute("INSERT INTO orders(order_id,customer_id,order_status,order_purchase_timestamp) "
                     "VALUES ('may-order','c1','delivered','2017-05-01')")
-        cur.execute("INSERT INTO order_items(order_id,order_item_id,price,freight_value) "
-                    "VALUES ('may-order',1,200,0)")
+        cur.execute("INSERT INTO order_items(order_id,order_item_id,product_id,seller_id,price,freight_value) "
+                    "VALUES ('may-order',1,'p1','s1',200,0)")
         result = rows(cur, "select * from v_monthly_revenue order by month")
         assert [row["month"].month for row in result] == [3, 4, 5]
         assert [float(row["revenue"]) for row in result] == [400, 0, 200]
