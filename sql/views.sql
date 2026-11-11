@@ -35,11 +35,20 @@ WITH m AS (
            COUNT(DISTINCT o.order_id) AS orders, SUM(oi.price) AS revenue
     FROM orders o JOIN order_items oi USING (order_id)
     WHERE o.order_status = 'delivered' GROUP BY 1
+), visible AS (
+    SELECT * FROM m WHERE month BETWEEN '2017-01-01' AND '2018-08-01'
+), calendar AS (
+    SELECT months.month::date AS month
+    FROM (SELECT MIN(month) AS first_month, MAX(month) AS last_month FROM visible) bounds,
+         LATERAL generate_series(bounds.first_month, bounds.last_month, INTERVAL '1 month') AS months(month)
+), dense AS (
+    SELECT c.month, COALESCE(m.orders, 0) AS orders, COALESCE(m.revenue, 0) AS revenue
+    FROM calendar c LEFT JOIN visible m USING (month)
 )
 SELECT month, orders, ROUND(revenue, 0) AS revenue,
        ROUND((revenue / NULLIF(LAG(revenue) OVER (ORDER BY month), 0) - 1) * 100, 1) AS mom_growth_pct,
        ROUND(AVG(revenue) OVER (ORDER BY month ROWS BETWEEN 2 PRECEDING AND CURRENT ROW), 0) AS revenue_3m_avg
-FROM m WHERE month BETWEEN '2017-01-01' AND '2018-08-01' ORDER BY month;
+FROM dense ORDER BY month;
 
 -- Q3. How do review scores vary by delivery timing?
 CREATE OR REPLACE VIEW v_review_vs_delay AS
